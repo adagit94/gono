@@ -19,26 +19,48 @@ const (
 
 type ReqCtx = *fasthttp.RequestCtx
 type PathParams map[string]string
+type RegisterHandler[T StatReqHandler | DynReqHandler] func(handler T) *MethodsHandlers[T]
+type MethodsHandlers[T StatReqHandler | DynReqHandler] struct {
+	Post, Get, Put, Patch, Delete, Options, Connect, Head, Trace RegisterHandler[T]
+}
 
-type statReqHandler func(ctx *fasthttp.RequestCtx)
-type StatMethods map[string]statReqHandler
-type statRoutes map[string]statReqHandler
+type StatReqHandler func(ctx ReqCtx)
+type StatMethods map[string]StatReqHandler
+type statRoutes map[string]StatReqHandler
 type statTree map[string]statRoutes
 
 type statRouter struct {
 	tree statTree
 }
 
-func (router *statRouter) AddRoute(path string, methods StatMethods) {
-	for method, handler := range methods {
-		_, keyExists := router.tree[method]
+func (router *statRouter) Route(path string) *MethodsHandlers[StatReqHandler] {
+	routeMethods := MethodsHandlers[StatReqHandler]{}
+	addMethodHandlerRegistrator := func(method string) func(handler StatReqHandler) *MethodsHandlers[StatReqHandler] {
+		return func(handler StatReqHandler) *MethodsHandlers[StatReqHandler] {
+			_, keyExists := router.tree[method]
 
-		if !keyExists {
-			router.tree[method] = make(statRoutes)
+			if !keyExists {
+				router.tree[method] = make(statRoutes)
+			}
+
+			router.tree[method][path] = handler
+
+			return &routeMethods
 		}
-
-		router.tree[method][path] = handler
 	}
+
+	routeMethods.Post = addMethodHandlerRegistrator(Post)
+	routeMethods.Get = addMethodHandlerRegistrator(Get)
+	routeMethods.Put = addMethodHandlerRegistrator(Put)
+	routeMethods.Patch = addMethodHandlerRegistrator(Patch)
+	routeMethods.Delete = addMethodHandlerRegistrator(Delete)
+	routeMethods.Options = addMethodHandlerRegistrator(Options)
+	routeMethods.Connect = addMethodHandlerRegistrator(Connect)
+	routeMethods.Head = addMethodHandlerRegistrator(Head)
+	routeMethods.Trace = addMethodHandlerRegistrator(Trace)
+
+	return &routeMethods
+
 }
 
 func (router *statRouter) HandleReq(ctx ReqCtx) {
@@ -60,7 +82,7 @@ func (router *statRouter) HandleReq(ctx ReqCtx) {
 }
 
 type IStatRouter interface {
-	AddRoute(path string, handlers StatMethods)
+	Route(path string) *MethodsHandlers[StatReqHandler]
 	HandleReq(ctx ReqCtx)
 }
 
@@ -70,8 +92,8 @@ func CreateStaticRouter() IStatRouter {
 	return &router
 }
 
-type dynReqHandler func(ctx *fasthttp.RequestCtx, pathParams PathParams)
-type DynMethods map[string]dynReqHandler
+type DynReqHandler func(ctx ReqCtx, pathParams PathParams)
+type DynMethods map[string]DynReqHandler
 type dynRoutes map[int][]dynRouteConf
 type dynTree map[string]dynRoutes
 
@@ -82,29 +104,46 @@ type segmentConf struct {
 
 type dynRouteConf struct {
 	segments []segmentConf
-	handler  dynReqHandler
+	handler  DynReqHandler
 }
 
 type dynRouter struct {
 	tree dynTree
 }
 
-func (router *dynRouter) AddRoute(path string, methods DynMethods) {
-	segs := strings.Split(path, "/")
-	segsCount := len(segs)
+func (router *dynRouter) Route(path string) *MethodsHandlers[DynReqHandler] {
+	routeMethods := MethodsHandlers[DynReqHandler]{}
+	addMethodHandlerRegistrator := func(method string) func(handler DynReqHandler) *MethodsHandlers[DynReqHandler] {
+		return func(handler DynReqHandler) *MethodsHandlers[DynReqHandler] {
+			segs := strings.Split(path, "/")
+			segsCount := len(segs)
 
-	for method, handler := range methods {
-		if _, methodKeyExists := router.tree[method]; !methodKeyExists {
-			router.tree[method] = make(dynRoutes)
+			if _, methodKeyExists := router.tree[method]; !methodKeyExists {
+				router.tree[method] = make(dynRoutes)
+			}
+
+			if _, segsCountKeyExists := router.tree[method][segsCount]; !segsCountKeyExists {
+				router.tree[method][segsCount] = make([]dynRouteConf, 0)
+			}
+
+			router.tree[method][segsCount] = append(router.tree[method][segsCount], dynRouteConf{segments: genSegConfs(segs), handler: handler})
+			sortRoutes(router.tree[method][segsCount])
+
+			return &routeMethods
 		}
-
-		if _, segsCountKeyExists := router.tree[method][segsCount]; !segsCountKeyExists {
-			router.tree[method][segsCount] = make([]dynRouteConf, 0)
-		}
-
-		router.tree[method][segsCount] = append(router.tree[method][segsCount], dynRouteConf{segments: genSegConfs(segs), handler: handler})
-		sortRoutes(router.tree[method][segsCount])
 	}
+
+	routeMethods.Post = addMethodHandlerRegistrator(Post)
+	routeMethods.Get = addMethodHandlerRegistrator(Get)
+	routeMethods.Put = addMethodHandlerRegistrator(Put)
+	routeMethods.Patch = addMethodHandlerRegistrator(Patch)
+	routeMethods.Delete = addMethodHandlerRegistrator(Delete)
+	routeMethods.Options = addMethodHandlerRegistrator(Options)
+	routeMethods.Connect = addMethodHandlerRegistrator(Connect)
+	routeMethods.Head = addMethodHandlerRegistrator(Head)
+	routeMethods.Trace = addMethodHandlerRegistrator(Trace)
+
+	return &routeMethods
 
 }
 
@@ -148,7 +187,7 @@ func (router *dynRouter) HandleReq(ctx ReqCtx) {
 }
 
 type IDynRouter interface {
-	AddRoute(path string, handlers DynMethods)
+	Route(path string) *MethodsHandlers[DynReqHandler]
 	HandleReq(ctx ReqCtx)
 }
 
