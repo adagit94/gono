@@ -4,7 +4,6 @@ import (
 	"slices"
 	"strings"
 	"unsafe"
-	"github.com/adagit94/gono/gotils/numbers"
 	s "github.com/adagit94/gono/gotils/slices"
 )
 
@@ -31,7 +30,7 @@ func genSegConfs(segs []string) []segmentConf {
 func sortRoutes(confs []dynRouteConf) {
 	slices.SortFunc(confs, func(a, b dynRouteConf) int {
 		aSegsLen, bSegsLen := len(a.segments), len(b.segments)
-		minSegs := numbers.Min(aSegsLen, bSegsLen)
+		minSegs := min(aSegsLen, bSegsLen)
 
 		for i := 0; i < minSegs; i++ {
 			aSeg, bSeg := a.segments[i], b.segments[i]

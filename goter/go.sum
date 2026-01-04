@@ -1,5 +1,5 @@
-github.com/adagit94/gono/gotils v0.0.0 h1:8TZJFNOxJmQwTGLg+JdiMkAM/xvf3O4nsm2EmfZ8quw=
-github.com/adagit94/gono/gotils v0.0.0/go.mod h1:JPn9ercIV4CSKej6t8jEqsanHc38gVrQJOQkODPMTew=
+github.com/adagit94/gono/gotils v0.1.0 h1:eHw2UQAd/2t/CaW3zaF3LU7/rqSXPbQVGEreJNrEU3M=
+github.com/adagit94/gono/gotils v0.1.0/go.mod h1:JPn9ercIV4CSKej6t8jEqsanHc38gVrQJOQkODPMTew=
 github.com/andybalholm/brotli v1.2.0 h1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwToPjQ=
 github.com/andybalholm/brotli v1.2.0/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/klauspost/compress v1.18.1 h1:bcSGx7UbpBqMChDtsF28Lw6v/G94LPrrbMbdC3JH2co=
