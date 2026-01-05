@@ -27,12 +27,12 @@ func genSegConfs(segs []string) []segmentConf {
 	return segsConfs
 }
 
-func sortRoutes(confs []dynRouteConf) {
-	slices.SortFunc(confs, func(a, b dynRouteConf) int {
+func sortRoutes(confs []routeConf) {
+	slices.SortFunc(confs, func(a, b routeConf) int {
 		aSegsLen, bSegsLen := len(a.segments), len(b.segments)
 		minSegs := min(aSegsLen, bSegsLen)
 
-		for i := 0; i < minSegs; i++ {
+		for i := range minSegs {
 			aSeg, bSeg := a.segments[i], b.segments[i]
 
 			if (aSeg.static && bSeg.static) || (!aSeg.static && !bSeg.static) {
