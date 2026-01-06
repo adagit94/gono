@@ -1,7 +1,7 @@
-package router
+package goter
 
 import (
-	"github.com/valyala/fasthttp"
+	"github.com/adagit94/gono/gotils"
 	"strings"
 )
 
@@ -17,33 +17,19 @@ const (
 	Trace   = "TRACE"
 )
 
-type ReqCtx = *fasthttp.RequestCtx
 type PathParams map[string]string
-
-type IRoute interface {
-	Post(reqHandler) IRoute
-	Get(reqHandler) IRoute
-	Put(reqHandler) IRoute
-	Patch(reqHandler) IRoute
-	Delete(reqHandler) IRoute
-	Options(reqHandler) IRoute
-	Connect(reqHandler) IRoute
-	Head(reqHandler) IRoute
-	Trace(reqHandler) IRoute
-}
 
 type IRouter interface {
 	Route(path string) IRoute
-	HandleReq(ctx ReqCtx)
+	Handle(path string, method string)
 }
 
 func CreateRouter() IRouter {
 	router := router{tree: make(tree)}
-
 	return &router
 }
 
-type reqHandler func(ctx ReqCtx, pathParams PathParams)
+type routeHandler func(pathParams PathParams)
 type routes map[int][]routeConf
 type tree map[string]routes
 
@@ -54,14 +40,14 @@ type segmentConf struct {
 
 type routeConf struct {
 	segments []segmentConf
-	handler  reqHandler
+	handler  routeHandler
 }
 
 type router struct {
 	tree tree
 }
 
-func (router *router) registerHandler(path string, method string, handler reqHandler) {
+func (router *router) registerHandler(path string, method string, handler routeHandler) {
 	segs := strings.Split(path, "/")
 	segsCount := len(segs)
 
@@ -78,25 +64,23 @@ func (router *router) registerHandler(path string, method string, handler reqHan
 }
 
 func (router *router) Route(path string) IRoute {
-	r := route{path: path, registerHandler: router.registerHandler}
-	return &r
+	route := route{path: path, registerHandler: router.registerHandler}
+	return &route
 }
 
-func (router *router) HandleReq(ctx ReqCtx) {
-	segs := strings.Split(unsafeString(ctx.Path()), "/")
+func (router *router) Handle(path string, method string) {
+	segs := strings.Split(path, "/")
 	segsCount := len(segs)
-	segsCountsMap, methodKey := router.tree[unsafeString(ctx.Method())]
+	segsCountsMap, methodKey := router.tree[method]
 
 	if !methodKey {
-		methodNotFound(ctx)
-		return
+		panic(&gotils.CodeError{Code: gotils.MethodNotRegisteredCode, Message: "Method not registered."})
 	}
 
 	routes, segsCountKey := segsCountsMap[segsCount]
 
 	if !segsCountKey {
-		routeNotFound(ctx)
-		return
+		panic(&gotils.CodeError{Code: gotils.RouteNotRegisteredCode, Message: "Route not registered."})
 	}
 
 	for _, routeConf := range routes {
@@ -115,7 +99,7 @@ func (router *router) HandleReq(ctx ReqCtx) {
 		}
 
 		if take {
-			routeConf.handler(ctx, pathParams)
+			routeConf.handler(pathParams)
 			break
 		}
 	}
@@ -123,50 +107,62 @@ func (router *router) HandleReq(ctx ReqCtx) {
 
 type route struct {
 	path            string
-	registerHandler func(path string, method string, handler reqHandler)
+	registerHandler func(path string, method string, handler routeHandler)
 }
 
-func (route *route) Post(handler reqHandler) IRoute {
+type IRoute interface {
+	Post(routeHandler) IRoute
+	Get(routeHandler) IRoute
+	Put(routeHandler) IRoute
+	Patch(routeHandler) IRoute
+	Delete(routeHandler) IRoute
+	Options(routeHandler) IRoute
+	Connect(routeHandler) IRoute
+	Head(routeHandler) IRoute
+	Trace(routeHandler) IRoute
+}
+
+func (route *route) Post(handler routeHandler) IRoute {
 	route.registerHandler(route.path, Post, handler)
 	return route
 }
 
-func (route *route) Get(handler reqHandler) IRoute {
+func (route *route) Get(handler routeHandler) IRoute {
 	route.registerHandler(route.path, Get, handler)
 	return route
 }
 
-func (route *route) Put(handler reqHandler) IRoute {
+func (route *route) Put(handler routeHandler) IRoute {
 	route.registerHandler(route.path, Put, handler)
 	return route
 }
 
-func (route *route) Patch(handler reqHandler) IRoute {
+func (route *route) Patch(handler routeHandler) IRoute {
 	route.registerHandler(route.path, Patch, handler)
 	return route
 }
 
-func (route *route) Delete(handler reqHandler) IRoute {
+func (route *route) Delete(handler routeHandler) IRoute {
 	route.registerHandler(route.path, Delete, handler)
 	return route
 }
 
-func (route *route) Options(handler reqHandler) IRoute {
+func (route *route) Options(handler routeHandler) IRoute {
 	route.registerHandler(route.path, Options, handler)
 	return route
 }
 
-func (route *route) Connect(handler reqHandler) IRoute {
+func (route *route) Connect(handler routeHandler) IRoute {
 	route.registerHandler(route.path, Connect, handler)
 	return route
 }
 
-func (route *route) Head(handler reqHandler) IRoute {
+func (route *route) Head(handler routeHandler) IRoute {
 	route.registerHandler(route.path, Head, handler)
 	return route
 }
 
-func (route *route) Trace(handler reqHandler) IRoute {
+func (route *route) Trace(handler routeHandler) IRoute {
 	route.registerHandler(route.path, Trace, handler)
 	return route
 }

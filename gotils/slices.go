@@ -1,4 +1,4 @@
-package slices
+package gotils
 
 func MapSlice[S ~[]E, E any, EE any](s S, f func(e E, i int) EE) []EE {
 	ss := make([]EE, len(s))

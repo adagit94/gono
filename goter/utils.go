@@ -1,19 +1,13 @@
-package router
+package goter
 
 import (
 	"slices"
 	"strings"
-	"unsafe"
-	s "github.com/adagit94/gono/gotils/slices"
+	"github.com/adagit94/gono/gotils"
 )
 
-func unsafeString(b []byte) string {
-	// #nosec G103
-	return *(*string)(unsafe.Pointer(&b))
-}
-
 func genSegConfs(segs []string) []segmentConf {
-	segsConfs := s.MapSlice(segs, func(seg string, i int) segmentConf {
+	segsConfs := gotils.MapSlice(segs, func(seg string, i int) segmentConf {
 		isDyn := strings.HasPrefix(seg, ":")
 
 		if isDyn {
