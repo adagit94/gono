@@ -17,13 +17,13 @@ const (
 	Trace   = "TRACE"
 )
 
+type routes[H any] map[int][]routeConf[H]
+type tree[H any] map[string]routes[H]
+
 func CreateRouter[H any]() IRouter[H] {
 	router := &router[H]{tree: make(tree[H])}
 	return router
 }
-
-type routes[H any] map[int][]routeConf[H]
-type tree[H any] map[string]routes[H]
 
 type segmentConf struct {
 	segment string
