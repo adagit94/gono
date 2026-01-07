@@ -1,168 +1,168 @@
-// package goter
+package goter
 
-// import (
-// 	"github.com/adagit94/gono/gotils"
-// 	"strings"
-// )
+import (
+	u "github.com/adagit94/gono/gotils"
+	"strings"
+)
 
-// const (
-// 	Post    = "POST"
-// 	Get     = "GET"
-// 	Put     = "PUT"
-// 	Patch   = "PATCH"
-// 	Delete  = "DELETE"
-// 	Options = "OPTIONS"
-// 	Connect = "CONNECT"
-// 	Head    = "HEAD"
-// 	Trace   = "TRACE"
-// )
+const (
+	Post    = "POST"
+	Get     = "GET"
+	Put     = "PUT"
+	Patch   = "PATCH"
+	Delete  = "DELETE"
+	Options = "OPTIONS"
+	Connect = "CONNECT"
+	Head    = "HEAD"
+	Trace   = "TRACE"
+)
 
-// type PathParams map[string]string
+func CreateRouter[H any]() IRouter[H] {
+	router := &router[H]{tree: make(tree[H])}
+	return router
+}
 
-// type IRouter interface {
-// 	Route(path string) IRoute
-// 	Handle(path string, method string)
-// }
+type routes[H any] map[int][]routeConf[H]
+type tree[H any] map[string]routes[H]
 
-// func CreateRouter() IRouter {
-// 	router := router{tree: make(tree)}
-// 	return &router
-// }
+type segmentConf struct {
+	segment string
+	static  bool
+}
 
-// type routeHandler func(pathParams PathParams)
-// type routes map[int][]routeConf
-// type tree map[string]routes
+type routeConf[H any] struct {
+	segments []segmentConf
+	handler  H
+}
 
-// type segmentConf struct {
-// 	segment string
-// 	static  bool
-// }
+type router[H any] struct {
+	tree tree[H]
+}
 
-// type routeConf struct {
-// 	segments []segmentConf
-// 	handler  routeHandler
-// }
+func (router *router[H]) registerHandler(path string, method string, handler H) {
+	segs := strings.Split(path, "/")
+	segsCount := len(segs)
 
-// type router struct {
-// 	tree tree
-// }
+	if _, methodKeyExists := router.tree[method]; !methodKeyExists {
+		router.tree[method] = make(routes[H])
+	}
 
-// func (router *router) registerHandler(path string, method string, handler routeHandler) {
-// 	segs := strings.Split(path, "/")
-// 	segsCount := len(segs)
+	if _, segsCountKeyExists := router.tree[method][segsCount]; !segsCountKeyExists {
+		router.tree[method][segsCount] = make([]routeConf[H], 0)
+	}
 
-// 	if _, methodKeyExists := router.tree[method]; !methodKeyExists {
-// 		router.tree[method] = make(routes)
-// 	}
+	router.tree[method][segsCount] = append(router.tree[method][segsCount], routeConf[H]{segments: genSegConfs(segs), handler: handler})
+	sortRoutes(router.tree[method][segsCount])
+}
 
-// 	if _, segsCountKeyExists := router.tree[method][segsCount]; !segsCountKeyExists {
-// 		router.tree[method][segsCount] = make([]routeConf, 0)
-// 	}
+type PathParams map[string]string
 
-// 	router.tree[method][segsCount] = append(router.tree[method][segsCount], routeConf{segments: genSegConfs(segs), handler: handler})
-// 	sortRoutes(router.tree[method][segsCount])
-// }
+type IRouter[H any] interface {
+	Route(path string) IRoute[H]
+	Select(path string, method string) (H, PathParams)
+}
 
-// func (router *router) Route(path string) IRoute {
-// 	route := route{path: path, registerHandler: router.registerHandler}
-// 	return &route
-// }
+func (router *router[H]) Route(path string) IRoute[H] {
+	route := &route[H]{path: path, registerHandler: router.registerHandler}
+	return route
+}
 
-// func (router *router) Handle(path string, method string) {
-// 	segs := strings.Split(path, "/")
-// 	segsCount := len(segs)
-// 	segsCountsMap, methodKey := router.tree[method]
+func (router *router[H]) Select(path string, method string) (H, PathParams) {
+	segs := strings.Split(path, "/")
+	segsCount := len(segs)
+	segsCountsMap, methodKey := router.tree[method]
 
-// 	if !methodKey {
-// 		panic(&gotils.CodeError{Code: gotils.MethodNotRegisteredCode, Message: "Method not registered."})
-// 	}
+	if !methodKey {
+		panic(&u.CodeError{Code: u.MethodNotRegisteredCode, Message: "Method not registered."})
+	}
 
-// 	routes, segsCountKey := segsCountsMap[segsCount]
+	routes, segsCountKey := segsCountsMap[segsCount]
 
-// 	if !segsCountKey {
-// 		panic(&gotils.CodeError{Code: gotils.RouteNotRegisteredCode, Message: "Route not registered."})
-// 	}
+	if !segsCountKey {
+		panic(&u.CodeError{Code: u.RouteNotRegisteredCode, Message: "Route not registered."})
+	}
 
-// 	for _, routeConf := range routes {
-// 		pathParams := make(PathParams)
-// 		take := true
+	for _, routeConf := range routes {
+		pathParams := make(PathParams)
+		take := true
 
-// 		for i, seg := range routeConf.segments {
-// 			if seg.static {
-// 				if seg.segment != segs[i] {
-// 					take = false
-// 					break
-// 				}
-// 			} else {
-// 				pathParams[seg.segment] = segs[i]
-// 			}
-// 		}
+		for i, seg := range routeConf.segments {
+			if seg.static {
+				if seg.segment != segs[i] {
+					take = false
+					break
+				}
+			} else {
+				pathParams[seg.segment] = segs[i]
+			}
+		}
 
-// 		if take {
-// 			routeConf.handler(pathParams)
-// 			break
-// 		}
-// 	}
-// }
+		if take {
+			return routeConf.handler, pathParams
+		}
+	}
 
-// type route struct {
-// 	path            string
-// 	registerHandler func(path string, method string, handler routeHandler)
-// }
+	panic(&u.CodeError{Code: u.HandlerNotFoundCode, Message: "Handler not found."})
+}
 
-// type IRoute interface {
-// 	Post(routeHandler) IRoute
-// 	Get(routeHandler) IRoute
-// 	Put(routeHandler) IRoute
-// 	Patch(routeHandler) IRoute
-// 	Delete(routeHandler) IRoute
-// 	Options(routeHandler) IRoute
-// 	Connect(routeHandler) IRoute
-// 	Head(routeHandler) IRoute
-// 	Trace(routeHandler) IRoute
-// }
+type route[H any] struct {
+	path            string
+	registerHandler func(path string, method string, handler H)
+}
 
-// func (route *route) Post(handler routeHandler) IRoute {
-// 	route.registerHandler(route.path, Post, handler)
-// 	return route
-// }
+type IRoute[H any] interface {
+	Post(H) IRoute[H]
+	Get(H) IRoute[H]
+	Put(H) IRoute[H]
+	Patch(H) IRoute[H]
+	Delete(H) IRoute[H]
+	Options(H) IRoute[H]
+	Connect(H) IRoute[H]
+	Head(H) IRoute[H]
+	Trace(H) IRoute[H]
+}
 
-// func (route *route) Get(handler routeHandler) IRoute {
-// 	route.registerHandler(route.path, Get, handler)
-// 	return route
-// }
+func (route *route[H]) Post(handler H) IRoute[H] {
+	route.registerHandler(route.path, Post, handler)
+	return route
+}
 
-// func (route *route) Put(handler routeHandler) IRoute {
-// 	route.registerHandler(route.path, Put, handler)
-// 	return route
-// }
+func (route *route[H]) Get(handler H) IRoute[H] {
+	route.registerHandler(route.path, Get, handler)
+	return route
+}
 
-// func (route *route) Patch(handler routeHandler) IRoute {
-// 	route.registerHandler(route.path, Patch, handler)
-// 	return route
-// }
+func (route *route[H]) Put(handler H) IRoute[H] {
+	route.registerHandler(route.path, Put, handler)
+	return route
+}
 
-// func (route *route) Delete(handler routeHandler) IRoute {
-// 	route.registerHandler(route.path, Delete, handler)
-// 	return route
-// }
+func (route *route[H]) Patch(handler H) IRoute[H] {
+	route.registerHandler(route.path, Patch, handler)
+	return route
+}
 
-// func (route *route) Options(handler routeHandler) IRoute {
-// 	route.registerHandler(route.path, Options, handler)
-// 	return route
-// }
+func (route *route[H]) Delete(handler H) IRoute[H] {
+	route.registerHandler(route.path, Delete, handler)
+	return route
+}
 
-// func (route *route) Connect(handler routeHandler) IRoute {
-// 	route.registerHandler(route.path, Connect, handler)
-// 	return route
-// }
+func (route *route[H]) Options(handler H) IRoute[H] {
+	route.registerHandler(route.path, Options, handler)
+	return route
+}
 
-// func (route *route) Head(handler routeHandler) IRoute {
-// 	route.registerHandler(route.path, Head, handler)
-// 	return route
-// }
+func (route *route[H]) Connect(handler H) IRoute[H] {
+	route.registerHandler(route.path, Connect, handler)
+	return route
+}
 
-// func (route *route) Trace(handler routeHandler) IRoute {
-// 	route.registerHandler(route.path, Trace, handler)
-// 	return route
-// }
+func (route *route[H]) Head(handler H) IRoute[H] {
+	route.registerHandler(route.path, Head, handler)
+	return route
+}
+
+func (route *route[H]) Trace(handler H) IRoute[H] {
+	route.registerHandler(route.path, Trace, handler)
+	return route
+}

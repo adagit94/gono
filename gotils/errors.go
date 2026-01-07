@@ -7,6 +7,7 @@ import (
 const (
 	MethodNotRegisteredCode = iota
 	RouteNotRegisteredCode
+	HandlerNotFoundCode
 )
 
 type CodeError struct {

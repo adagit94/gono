@@ -21,8 +21,8 @@ func genSegConfs(segs []string) []segmentConf {
 	return segsConfs
 }
 
-func sortRoutes(confs []routeConf) {
-	slices.SortFunc(confs, func(a, b routeConf) int {
+func sortRoutes[H any](confs []routeConf[H]) {
+	slices.SortFunc(confs, func(a, b routeConf[H]) int {
 		aSegsLen, bSegsLen := len(a.segments), len(b.segments)
 		minSegs := min(aSegsLen, bSegsLen)
 
