@@ -1,12 +1,10 @@
 package gotils
 
 import (
+	"maps"
 	"numbers"
 	"slices"
-	"maps"
 	"unicode/utf8"
-	"math/big"
-	"crypto/rand"
 )
 
 // const (
@@ -33,13 +31,13 @@ func GenQMaps() (rMap, error) {
 		i := 0
 
 		if l := len(s); l > 1 {
-			v, err := rand.Int(rand.Reader, big.NewInt(int64(l-1)))
+			n, err := RandInt(int64(l - 1))
 
 			if err != nil {
 				return nil, err
 			}
 
-			i = int(v.Int64())
+			i = int(n.Int64())
 		}
 
 		m[r] = s[i]
@@ -58,19 +56,57 @@ func GenKey(rMap rMap, rOffset rOffset) key {
 
 }
 
-func encode(in string, rMap rMap, minNoiseF uint8, maxNoiseF uint8) string {
-	reservedRunes := slices.Sorted(maps.Values(rMap))
-	availableRunes := make([]rune, runesCount - len(reservedRunes))
-	//  outS := make([]rune, )
+func encode(in string, rMap rMap, fMinNoise float32, fMaxNoise float32) (string, error) {
+	out := make([]rune, len(in))
+	noiseUnavailableRunes := make([]rune, 0)
 
-	 for r := range in {
+	for i, r := range in {
+		out[i] = rMap[r]
+		noiseUnavailableRunes = append(noiseUnavailableRunes, rMap[r])
+	}
 
-	 }
+	noiseAvailableRunes := Difference(slices.Sorted(maps.Values(rMap)), noiseUnavailableRunes)
+	qNoiseAvailableRunes := float32(len(noiseAvailableRunes))
+	minNoise := uint32(Clamp(qNoiseAvailableRunes*fMinNoise, 0, qNoiseAvailableRunes))
+	maxNoise := uint32(Clamp(qNoiseAvailableRunes*fMaxNoise, 0, qNoiseAvailableRunes))
 
-	slices.sor
+	if minNoise > 0 && maxNoise > 0 && maxNoise >= minNoise {
+		steps := maxNoise - minNoise
+
+		if steps > 0 {
+			n, err := RandInt(int64(steps))
+
+			if err != nil {
+				return "", err
+			}
+
+			steps = uint32(n.Uint64())
+		}
+
+		for i := range minNoise + steps {
+			j := 0
+			
+			if l := len(out); l > 0 {
+				n, err := RandInt(int64(l))
+
+				if err != nil {
+					return "", err
+				}
+
+				j = int(n.Int64())
+			}
+
+
+			out = slices.Insert(out, j, noiseAvailableRunes[i])
+		}
+
+	}
+
+	// slices.sor
 	// len(reservedRunes)
 	// slices
 	// make([]rune, )
 
 	// reservedRunes
+
 }

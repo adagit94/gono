@@ -4,7 +4,7 @@ import (
 	"slices"
 )
 
-func MapSlice[S ~[]E, E any, EE any](s S, f func(e E, i int) EE) []EE {
+func Map[S ~[]E, E any, EE any](s S, f func(e E, i int) EE) []EE {
 	ss := make([]EE, len(s))
 
 	for i, e := range s {
@@ -14,7 +14,7 @@ func MapSlice[S ~[]E, E any, EE any](s S, f func(e E, i int) EE) []EE {
 	return ss
 }
 
-func DiffSlices[S ~[]E, E comparable](s1 S, s2 S) S {
+func Difference[S ~[]E, E comparable](s1 S, s2 S) S {
 	s := make(S, 0)
 
 	for _, v := range s1 {
