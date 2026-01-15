@@ -1,5 +1,9 @@
 package gotils
 
+import (
+	"slices"
+)
+
 func MapSlice[S ~[]E, E any, EE any](s S, f func(e E, i int) EE) []EE {
 	ss := make([]EE, len(s))
 
@@ -8,4 +12,16 @@ func MapSlice[S ~[]E, E any, EE any](s S, f func(e E, i int) EE) []EE {
 	}
 
 	return ss
+}
+
+func DiffSlices[S ~[]E, E comparable](s1 S, s2 S) S {
+	s := make(S, 0)
+
+	for _, v := range s1 {
+		if !slices.Contains(s2, v) {
+			s = append(s, v)
+		}
+	}
+
+	return s
 }

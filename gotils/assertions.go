@@ -6,6 +6,5 @@ func Assert[T any](x any) T {
 
 func AssertSafely[T any](x any) (T, bool) {
 	v, ok := x.(T)
-	
 	return v, ok
 }
