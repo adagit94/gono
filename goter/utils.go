@@ -7,7 +7,7 @@ import (
 )
 
 func genSegConfs(segs []string) []segmentConf {
-	segsConfs := gotils.MapSlice(segs, func(seg string, i int) segmentConf {
+	segsConfs := gotils.Map(segs, func(seg string, i int) segmentConf {
 		isDyn := strings.HasPrefix(seg, ":")
 
 		if isDyn {

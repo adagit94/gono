@@ -2,6 +2,7 @@ package gotils
 
 import (
 	"maps"
+	"math"
 	"numbers"
 	"slices"
 	"unicode/utf8"
@@ -13,50 +14,72 @@ import (
 // 	aLo, zLo uint8 = 97, 122
 // )
 
-type rMap map[rune]rune
-type rOffset uint16
-
 const runesCount = utf8.MaxRune + 1
 
-func GenQMaps() (rMap, error) {
+type runesMap map[rune]rune
+
+func GenRunesMaps(runesRangeFrom rune, runesRangeTo rune) (runesMap, runesMap, error) {
+	runesCount := runesRangeTo - runesRangeFrom + 1
 	s := make([]rune, runesCount)
 
-	for i := range s {
-		s[i] = rune(i)
+	for i, v := 0, runesRangeFrom; v <= runesRangeTo; v++ {
+		s[i] = v
+		i++
 	}
 
-	m := make(rMap, runesCount)
+	m := make(runesMap, runesCount)
+	m2 := make(runesMap, runesCount)
 
 	for r := range runesCount {
 		i := 0
 
 		if l := len(s); l > 1 {
-			n, err := RandInt(int64(l - 1))
+			n, err := RandInt(int64(l))
 
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
-			i = int(n.Int64())
+			i = int(n.Uint64())
 		}
 
 		m[r] = s[i]
+		m2[s[i]] = r  
 		s = slices.Delete(s, i, i+1)
 	}
 
-	return m, nil
+	return m, m2, nil
 }
 
-type key struct {
-	rOffset rOffset
-	rMap    rMap
+func computeRunesRanges(fNoise float64) (rune, rune, rune, rune, error) {
+	qNoise := rune(Clamp(math.Round(runesCount*fNoise), 0, runesCount))
+	n, err := RandInt(2)
+
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+
+	if n.Uint64() == 0 {
+		return 0, utf8.MaxRune - qNoise, runesCount - qNoise, utf8.MaxRune, nil
+	} else {
+		return qNoise, utf8.MaxRune, 0, qNoise - 1, nil
+	}
 }
 
-func GenKey(rMap rMap, rOffset rOffset) key {
+type key [4]runesMap
+
+func GenKey(fNoise float64) (key, error) {
+	var k key
+
+	for i := range 4 {
+		k[i] = make(runesMap)
+	}
+
+	// var arr key = []
 
 }
 
-func encode(in string, rMap rMap, fMinNoise float32, fMaxNoise float32) (string, error) {
+func encrypt(in string, rMap runesMap, fMinNoise float32, fMaxNoise float32) (string, error) {
 	out := make([]rune, len(in))
 	noiseUnavailableRunes := make([]rune, 0)
 
@@ -85,7 +108,7 @@ func encode(in string, rMap rMap, fMinNoise float32, fMaxNoise float32) (string,
 
 		for i := range minNoise + steps {
 			j := 0
-			
+
 			if l := len(out); l > 0 {
 				n, err := RandInt(int64(l))
 
@@ -96,10 +119,8 @@ func encode(in string, rMap rMap, fMinNoise float32, fMaxNoise float32) (string,
 				j = int(n.Int64())
 			}
 
-
 			out = slices.Insert(out, j, noiseAvailableRunes[i])
 		}
-
 	}
 
 	// slices.sor
