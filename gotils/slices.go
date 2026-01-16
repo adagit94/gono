@@ -25,3 +25,15 @@ func Difference[S ~[]E, E comparable](s1 S, s2 S) S {
 
 	return s
 }
+
+func Flat[S ~[][]E, E any](s S) []E {
+	ss := make([]E, 0)
+
+	for _, e := range s {
+		for _, ee := range e {
+			ss = append(ss, ee)
+		}
+	}
+
+	return ss
+}
