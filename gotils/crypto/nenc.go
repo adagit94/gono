@@ -3,18 +3,20 @@ package crypto
 import (
 	"fmt"
 	"maps"
-	// "math"
 	"slices"
-	// "strings"
 	n "github.com/adagit94/gono/gotils/numbers"
-	uc "github.com/adagit94/gono/gotils/unicode"
 	sl "github.com/adagit94/gono/gotils/slices"
+	uc "github.com/adagit94/gono/gotils/unicode"
 )
 
+type Replacements map[rune][]rune
 
-type replacements map[rune][]rune
+type Key struct {
+	Replacements   Replacements
+	PotentialNoise []rune
+}
 
-func genReplacements(reservedRunes []rune, replacementsCount int) (replacements, []rune) {
+func GenKey(reservedRunes []rune, replacementsCount int) Key {
 	runes := make([]rune, uc.RunesCount)
 
 	for r := range uc.RunesCount {
@@ -28,7 +30,7 @@ func genReplacements(reservedRunes []rune, replacementsCount int) (replacements,
 	}
 
 	potentialReplacements := slices.Clone(runes)
-	replacements := make(replacements, len(reservedRunes))
+	replacements := make(Replacements, len(reservedRunes))
 
 	for range replacementsCount {
 		for _, r := range reservedRunes {
@@ -51,25 +53,14 @@ func genReplacements(reservedRunes []rune, replacementsCount int) (replacements,
 
 	potentialNoise := sl.Difference(runes, sl.Flat(slices.Collect(maps.Values(replacements))))
 
-	return replacements, potentialNoise
+	return Key{Replacements: replacements, PotentialNoise: potentialNoise}
 }
 
-type key struct {
-	replacements   replacements
-	potentialNoise []rune
-}
-
-func genKey(reservedRunes []rune, replacementsCount int) key {
-	replacements, potentialNoise := genReplacements(reservedRunes, replacementsCount)
-
-	return key{replacements: replacements, potentialNoise: potentialNoise}
-}
-
-func encrypt(in string, key key, noiseMin int64, noiseMax int64) string {
+func Encrypt(in string, key Key, noiseMin int64, noiseMax int64) string {
 	out := make([]rune, len(in))
 
 	for i, r := range in {
-		replacements, replacementsKey := key.replacements[r]
+		replacements, replacementsKey := key.Replacements[r]
 
 		if !replacementsKey {
 			panic(fmt.Errorf("No replacement available for character %v. Rune key isn't present.", r))
@@ -78,16 +69,34 @@ func encrypt(in string, key key, noiseMin int64, noiseMax int64) string {
 		out[i] = replacements[n.RandIntPanic(int64(len(replacements))).Int64()]
 	}
 
-	if qPotentialNoise, qNoise := int64(len(key.potentialNoise)), noiseMin+n.RandIntPanic(noiseMax-noiseMin+1).Int64(); qPotentialNoise > 0 && qNoise > 0 {
+	if qPotentialNoise, qNoise := int64(len(key.PotentialNoise)), noiseMin+n.RandIntPanic(noiseMax-noiseMin+1).Int64(); qPotentialNoise > 0 && qNoise > 0 {
 		for range qNoise {
 			i := n.RandIntPanic(qPotentialNoise).Int64()
 			j := 0
-			
+
 			if l := len(out); l > 0 {
 				j = int(n.RandIntPanic(int64(len(out) + 1)).Int64())
 			}
 
-			out = slices.Insert(out, j, key.potentialNoise[i])
+			out = slices.Insert(out, j, key.PotentialNoise[i])
+		}
+	}
+
+	return string(out)
+}
+
+func Decrypt(in string, key Key) string {
+	out := []rune{}
+	underlayingRunes := maps.Keys(key.Replacements)
+
+	for _, r := range in {
+		for underlayingRune := range underlayingRunes {
+			rpmMatched := slices.Contains(key.Replacements[underlayingRune], r)
+
+			if rpmMatched {
+				out = append(out, underlayingRune)
+				break
+			}
 		}
 	}
 
