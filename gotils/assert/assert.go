@@ -1,4 +1,4 @@
-package gotils
+package assert
 
 func Assert[T any](x any) T {
 	return x.(T)

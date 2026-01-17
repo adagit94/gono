@@ -1,4 +1,4 @@
-package gotils
+package maps
 
 import (
 	"maps"

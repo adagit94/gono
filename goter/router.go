@@ -1,8 +1,8 @@
 package goter
 
 import (
-	u "github.com/adagit94/gono/gotils"
 	"strings"
+	e "github.com/adagit94/gono/gotils/errors"
 )
 
 const (
@@ -73,13 +73,13 @@ func (router *router[H]) Select(path string, method string) (H, PathParams) {
 	segsCountsMap, methodKey := router.tree[method]
 
 	if !methodKey {
-		panic(&u.CodeError{Code: u.MethodNotRegisteredCode, Message: "Method not registered."})
+		panic(&e.CodeError{Code: e.MethodNotRegisteredCode, Message: "Method not registered."})
 	}
 
 	routes, segsCountKey := segsCountsMap[segsCount]
 
 	if !segsCountKey {
-		panic(&u.CodeError{Code: u.RouteNotRegisteredCode, Message: "Route not registered."})
+		panic(&e.CodeError{Code: e.RouteNotRegisteredCode, Message: "Route not registered."})
 	}
 
 	for _, routeConf := range routes {
@@ -102,7 +102,7 @@ func (router *router[H]) Select(path string, method string) (H, PathParams) {
 		}
 	}
 
-	panic(&u.CodeError{Code: u.HandlerNotFoundCode, Message: "Handler not found."})
+	panic(&e.CodeError{Code: e.HandlerNotFoundCode, Message: "Handler not found."})
 }
 
 type route[H any] struct {

@@ -1,10 +1,9 @@
-package gotils
+package env
 
 import (
 	"os"
 	"strings"
 )
-
 
 func GetEnvVarsCli() map[string]string {
 	args := os.Environ()

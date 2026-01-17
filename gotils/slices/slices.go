@@ -1,4 +1,4 @@
-package gotils
+package slices
 
 import (
 	"slices"
