@@ -18,3 +18,13 @@ type CodeError struct {
 func (err *CodeError) Error() string {
 	return fmt.Sprintf("[%d]: %s", err.Code, err.Message)
 }
+
+func Safely(f func(), onPanic func(v any)) {
+	defer func() {
+		if r := recover(); r != nil {
+			onPanic(r)
+		}
+	}()
+
+	f()
+}
