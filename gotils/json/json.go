@@ -37,4 +37,3 @@ func JsonParse[T any](source []byte, target *T) error {
 func JsonParseStr[T any](source string, target *T) error {
 	return sonic.UnmarshalString(source, target)
 }
-
