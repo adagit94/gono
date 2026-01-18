@@ -6,11 +6,11 @@ import (
 	"os"
 )
 
-func Json[T any](v *T) ([]byte, error) {
+func Json[V any](v *V) ([]byte, error) {
 	return sonic.Marshal(v)
 }
 
-func JsonToFile(v *any, perm os.FileMode, pathSegments ...string) error {
+func JsonToFile[V any](v *V, perm os.FileMode, pathSegments ...string) error {
 	s, err := Json(v)
 
 	if err != nil {
@@ -26,7 +26,7 @@ func JsonToFile(v *any, perm os.FileMode, pathSegments ...string) error {
 	return nil
 }
 
-func JsonStr(v *any) (string, error) {
+func JsonStr[V any](v *V) (string, error) {
 	return sonic.MarshalString(v)
 }
 
