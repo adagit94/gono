@@ -3,11 +3,11 @@ package goter
 import (
 	"slices"
 	"strings"
-	"github.com/adagit94/gono/gotils"
+	s "github.com/adagit94/gono/gotils/slices"
 )
 
 func genSegConfs(segs []string) []segmentConf {
-	segsConfs := gotils.MapSlice(segs, func(seg string, i int) segmentConf {
+	segsConfs := s.Map(segs, func(seg string, i int) segmentConf {
 		isDyn := strings.HasPrefix(seg, ":")
 
 		if isDyn {
@@ -21,8 +21,8 @@ func genSegConfs(segs []string) []segmentConf {
 	return segsConfs
 }
 
-func sortRoutes(confs []routeConf) {
-	slices.SortFunc(confs, func(a, b routeConf) int {
+func sortRoutes[H any](confs []routeConf[H]) {
+	slices.SortFunc(confs, func(a, b routeConf[H]) int {
 		aSegsLen, bSegsLen := len(a.segments), len(b.segments)
 		minSegs := min(aSegsLen, bSegsLen)
 
