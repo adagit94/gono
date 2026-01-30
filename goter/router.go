@@ -1,8 +1,9 @@
 package goter
 
 import (
-	"strings"
-	e "github.com/adagit94/gono/gotils/errors"
+	errs "github.com/adagit94/gono/gotils/errors"
+	uri "github.com/adagit94/gono/gotils/uri"
+	strs "strings"
 )
 
 const (
@@ -17,11 +18,13 @@ const (
 	Trace   = "TRACE"
 )
 
-type routes[H any] map[int][]routeConf[H]
-type tree[H any] map[string]routes[H]
+type IRouter[H any] interface {
+	Route(path string) IRoute[H]
+	Select(path string, query string, method string) (H, IParams)
+}
 
 func CreateRouter[H any]() IRouter[H] {
-	router := &router[H]{tree: make(tree[H])}
+	router := &router[H]{tree: make(routesTree[H])}
 	return router
 }
 
@@ -35,12 +38,16 @@ type routeConf[H any] struct {
 	handler  H
 }
 
+type routes[H any] map[int][]routeConf[H]
+
+type routesTree[H any] map[string]routes[H]
+
 type router[H any] struct {
-	tree tree[H]
+	tree routesTree[H]
 }
 
 func (router *router[H]) registerHandler(path string, method string, handler H) {
-	segs := strings.Split(path, "/")
+	segs := strs.Split(path, "/")
 	segsCount := len(segs)
 
 	if _, methodKeyExists := router.tree[method]; !methodKeyExists {
@@ -55,35 +62,28 @@ func (router *router[H]) registerHandler(path string, method string, handler H) 
 	sortRoutes(router.tree[method][segsCount])
 }
 
-type PathParams map[string]string
-
-type IRouter[H any] interface {
-	Route(path string) IRoute[H]
-	Select(path string, method string) (H, PathParams)
-}
-
 func (router *router[H]) Route(path string) IRoute[H] {
 	route := &route[H]{path: path, registerHandler: router.registerHandler}
 	return route
 }
 
-func (router *router[H]) Select(path string, method string) (H, PathParams) {
-	segs := strings.Split(path, "/")
+func (router *router[H]) Select(path string, query string, method string) (H, IParams) {
+	segs := strs.Split(path, "/")
 	segsCount := len(segs)
 	segsCountsMap, methodKey := router.tree[method]
 
 	if !methodKey {
-		panic(&e.CodeError{Code: e.MethodNotRegisteredCode, Message: "Method not registered."})
+		panic(&errs.CodeError{Code: errs.MethodNotRegisteredCode, Message: "Method not registered."})
 	}
 
 	routes, segsCountKey := segsCountsMap[segsCount]
 
 	if !segsCountKey {
-		panic(&e.CodeError{Code: e.RouteNotRegisteredCode, Message: "Route not registered."})
+		panic(&errs.CodeError{Code: errs.RouteNotRegisteredCode, Message: "Route not registered."})
 	}
 
 	for _, routeConf := range routes {
-		pathParams := make(PathParams)
+		pathParams := make(paramsMap)
 		take := true
 
 		for i, seg := range routeConf.segments {
@@ -98,16 +98,11 @@ func (router *router[H]) Select(path string, method string) (H, PathParams) {
 		}
 
 		if take {
-			return routeConf.handler, pathParams
+			return routeConf.handler, &params{path: &pathParams, query: uri.ParseQueryStr(query)}
 		}
 	}
 
-	panic(&e.CodeError{Code: e.HandlerNotFoundCode, Message: "Handler not found."})
-}
-
-type route[H any] struct {
-	path            string
-	registerHandler func(path string, method string, handler H)
+	panic(&errs.CodeError{Code: errs.HandlerNotFoundCode, Message: "Handler not found."})
 }
 
 type IRoute[H any] interface {
@@ -120,6 +115,11 @@ type IRoute[H any] interface {
 	Connect(H) IRoute[H]
 	Head(H) IRoute[H]
 	Trace(H) IRoute[H]
+}
+
+type route[H any] struct {
+	path            string
+	registerHandler func(path string, method string, handler H)
 }
 
 func (route *route[H]) Post(handler H) IRoute[H] {
@@ -165,4 +165,24 @@ func (route *route[H]) Head(handler H) IRoute[H] {
 func (route *route[H]) Trace(handler H) IRoute[H] {
 	route.registerHandler(route.path, Trace, handler)
 	return route
+}
+
+type paramsMap = map[string]string
+
+type IParams interface {
+	Path(param string) string
+	Query(param string) string
+}
+
+type params struct {
+	path  *paramsMap
+	query *paramsMap
+}
+
+func (params *params) Path(param string) string {
+	return (*params.path)[param]
+}
+
+func (params *params) Query(param string) string {
+	return (*params.query)[param]
 }
